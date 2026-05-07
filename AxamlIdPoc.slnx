@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/tests/">
+    <Project Path="tests/AxamlIdGen.Tests/AxamlIdGen.Tests.csproj" />
+    <Project Path="tests/SampleApp.Headless/SampleApp.Headless.csproj" />
+  </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/AxamlIdGen/AxamlIdGen.csproj" />
+  </Folder>
+  <Project Path="SampleApp/SampleApp.csproj" />
+</Solution>

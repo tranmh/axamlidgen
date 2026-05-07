@@ -1,0 +1,93 @@
+{
+  "instance": {
+    "LoginView_Button_Cancel": {
+      "view": "LoginView",
+      "control": "Button",
+      "file": "Views/LoginView.axaml",
+      "line": 17,
+      "source": "explicit",
+      "collisionResolved": false
+    },
+    "LoginView_Button_Submit": {
+      "view": "LoginView",
+      "control": "Button",
+      "file": "Views/LoginView.axaml",
+      "line": 13,
+      "source": "explicit",
+      "collisionResolved": false
+    },
+    "LoginView_Email_Field": {
+      "view": "LoginView",
+      "control": "TextBox",
+      "file": "Views/LoginView.axaml",
+      "line": 7,
+      "source": "explicit",
+      "collisionResolved": false
+    },
+    "LoginView_Error_Banner": {
+      "view": "LoginView",
+      "control": "TextBlock",
+      "file": "Views/LoginView.axaml",
+      "line": 20,
+      "source": "explicit",
+      "collisionResolved": false
+    },
+    "LoginView_Password_Field": {
+      "view": "LoginView",
+      "control": "TextBox",
+      "file": "Views/LoginView.axaml",
+      "line": 9,
+      "source": "explicit",
+      "collisionResolved": false
+    },
+    "MainWindow_Login_Nav": {
+      "view": "MainWindow",
+      "control": "Button",
+      "file": "MainWindow.axaml",
+      "line": 12,
+      "source": "explicit",
+      "collisionResolved": false
+    },
+    "MainWindow_Settings_Nav": {
+      "view": "MainWindow",
+      "control": "Button",
+      "file": "MainWindow.axaml",
+      "line": 14,
+      "source": "explicit",
+      "collisionResolved": false
+    },
+    "MainWindow_Title_Label": {
+      "view": "MainWindow",
+      "control": "TextBlock",
+      "file": "MainWindow.axaml",
+      "line": 9,
+      "source": "explicit",
+      "collisionResolved": false
+    },
+    "SettingsView_Button_Save": {
+      "view": "SettingsView",
+      "control": "Button",
+      "file": "Views/SettingsView.axaml",
+      "line": 12,
+      "source": "explicit",
+      "collisionResolved": false
+    },
+    "SettingsView_ToggleSwitch_DarkMode": {
+      "view": "SettingsView",
+      "control": "ToggleSwitch",
+      "file": "Views/SettingsView.axaml",
+      "line": 7,
+      "source": "explicit",
+      "collisionResolved": false
+    },
+    "SettingsView_ToggleSwitch_EmailNotifications": {
+      "view": "SettingsView",
+      "control": "ToggleSwitch",
+      "file": "Views/SettingsView.axaml",
+      "line": 9,
+      "source": "explicit",
+      "collisionResolved": false
+    }
+  },
+  "templateScoped": []
+}

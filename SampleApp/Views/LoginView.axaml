@@ -1,0 +1,23 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="SampleApp.Views.LoginView">
+    <StackPanel Margin="16" Spacing="8">
+        <TextBlock Text="Sign in to continue"/>
+        <TextBox PlaceholderText="Email"
+                 AutomationProperties.AutomationId="LoginView_Email_Field"/>
+        <TextBox PlaceholderText="Password"
+                 AutomationProperties.AutomationId="LoginView_Password_Field"
+                 PasswordChar="*"/>
+        <Button x:Name="Submit"
+                Content="Sign in"
+                AutomationProperties.AutomationId="LoginView_Button_Submit"
+                HorizontalAlignment="Left"/>
+        <Button x:Name="Cancel"
+                Content="Cancel"
+                AutomationProperties.AutomationId="LoginView_Button_Cancel"
+                HorizontalAlignment="Left"/>
+        <TextBlock x:Name="ErrorBanner"
+                   AutomationProperties.AutomationId="LoginView_Error_Banner"
+                   Foreground="Red" IsVisible="False"/>
+    </StackPanel>
+</UserControl>

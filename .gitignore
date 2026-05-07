@@ -1,0 +1,18 @@
+# Build artifacts
+**/bin/
+**/obj/
+
+# Node modules (e2e/)
+**/node_modules/
+
+# IDE
+.idea/
+.vs/
+*.user
+*.suo
+
+# OS
+.DS_Store
+
+# package-lock.json kept per npm convention; uncomment if undesired
+# package-lock.json

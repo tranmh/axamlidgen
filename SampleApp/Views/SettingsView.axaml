@@ -1,0 +1,15 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="SampleApp.Views.SettingsView">
+    <StackPanel Margin="16" Spacing="8">
+        <TextBlock Text="Preferences" FontWeight="Bold"/>
+        <ToggleSwitch Content="Dark mode"
+                      AutomationProperties.AutomationId="SettingsView_ToggleSwitch_DarkMode"/>
+        <ToggleSwitch Content="Email notifications"
+                      AutomationProperties.AutomationId="SettingsView_ToggleSwitch_EmailNotifications"/>
+        <Button x:Name="Save"
+                Content="Save"
+                AutomationProperties.AutomationId="SettingsView_Button_Save"
+                HorizontalAlignment="Left"/>
+    </StackPanel>
+</UserControl>

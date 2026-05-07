@@ -1,0 +1,14 @@
+{
+  "sentinelValue": "@auto",
+  "namingPattern": "^[A-Z][A-Za-z0-9]+(_[A-Za-z][A-Za-z0-9]*)+$",
+  "missingPolicy": "strict",
+  "includeGlobs": ["**/*.axaml", "**/*.xaml"],
+  "excludeGlobs": ["**/bin/**", "**/obj/**", "**/Generated/**"],
+  "outputs": {
+    "json": "manifest/automation-ids.json",
+    "cSharp": "SampleApp/Generated/AutomationIds.g.cs",
+    "cSharpNamespace": "SampleApp.Generated",
+    "typeScript": "e2e/automation-ids.generated.ts"
+  },
+  "maxIdLength": 64
+}
