@@ -14,13 +14,19 @@ public static class XamlScanner
 
         var rootFull = Path.GetFullPath(root);
 
+        // Sort lexicographically by relative path so ordinal/collision-suffix
+        // synthesis is deterministic across platforms (Linux's inode order
+        // would otherwise produce different IDs on different machines).
+        var matches = new List<string>();
         foreach (var file in Directory.EnumerateFiles(rootFull, "*", SearchOption.AllDirectories))
         {
             var rel = Path.GetRelativePath(rootFull, file).Replace('\\', '/');
             if (!includeRegexes.Any(r => r.IsMatch(rel))) continue;
             if (excludeRegexes.Any(r => r.IsMatch(rel))) continue;
-            yield return file;
+            matches.Add(file);
         }
+        matches.Sort(StringComparer.Ordinal);
+        foreach (var f in matches) yield return f;
     }
 
     private static Regex GlobToRegex(string glob)

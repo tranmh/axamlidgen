@@ -63,10 +63,11 @@ try
 {
     return command switch
     {
-        "scan"  => RunScan(root, config),
-        "check" => RunCheck(root, repoRoot, config),
-        "write" => RunWrite(root, repoRoot, config),
-        "emit"  => RunEmit(root, repoRoot, config),
+        "scan"       => RunScan(root, config),
+        "check"      => RunCheck(root, repoRoot, config),
+        "write"      => RunWrite(root, repoRoot, config),
+        "emit"       => RunEmit(root, repoRoot, config),
+        "instrument" => RunInstrument(root, repoRoot, config),
         _ => UnknownCommand(command)
     };
 }
@@ -112,6 +113,55 @@ static int RunWrite(string root, string repoRoot, ToolConfig config)
     var errCode = ExitCodeForDiagnostics(result);
     if (errCode != 0) return errCode;
 
+    var changed = Pipeline.FlushManifests(result, repoRoot, config.Outputs);
+    Console.WriteLine($"Manifests written: json={changed.Json} cs={changed.CSharp} ts={changed.Ts}");
+    return 0;
+}
+
+static int RunInstrument(string root, string repoRoot, ToolConfig config)
+{
+    var sw = System.Diagnostics.Stopwatch.StartNew();
+    var instrumenter = new AxamlIdGen.Synthesis.Instrumenter(config);
+
+    var files = AxamlIdGen.Scanning.XamlScanner
+        .EnumerateFiles(root, config.IncludeGlobs, config.ExcludeGlobs)
+        .ToList();
+
+    int totalAdded = 0;
+    int totalSkipped = 0;
+    int filesModified = 0;
+    var allDiagnostics = new List<AxamlIdGen.Models.Diagnostic>();
+
+    foreach (var file in files)
+    {
+        var r = instrumenter.InstrumentFile(file);
+        if (r.Added > 0) filesModified++;
+        totalAdded += r.Added;
+        totalSkipped += r.SkippedAnchorless;
+        allDiagnostics.AddRange(r.Diagnostics);
+    }
+
+    sw.Stop();
+
+    foreach (var d in allDiagnostics.OrderBy(d => d.File).ThenBy(d => d.Line))
+    {
+        var sev = d.Severity == DiagnosticSeverity.Error ? "error" : "warning";
+        Console.Error.WriteLine($"{d.File}:{d.Line}:{d.Column}: {sev} {d.Code}: {d.Message}");
+    }
+
+    Console.WriteLine($"AxamlIdGen instrument: {files.Count} files, +{totalAdded} ids in {filesModified} files, {totalSkipped} skipped (anchorless), {sw.ElapsedMilliseconds}ms");
+
+    if (allDiagnostics.Any(d => d.Severity == DiagnosticSeverity.Error))
+        return 1;
+
+    // Re-run pipeline to emit fresh manifests reflecting the new IDs.
+    var result = Pipeline.Run(root, config, writeBack: false);
+    if (result.Diagnostics.Any(d => d.Severity == DiagnosticSeverity.Error))
+    {
+        foreach (var d in result.Diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error))
+            Console.Error.WriteLine($"{d.File}:{d.Line}:{d.Column}: error {d.Code}: {d.Message}");
+        return 1;
+    }
     var changed = Pipeline.FlushManifests(result, repoRoot, config.Outputs);
     Console.WriteLine($"Manifests written: json={changed.Json} cs={changed.CSharp} ts={changed.Ts}");
     return 0;
@@ -179,6 +229,10 @@ static void PrintUsage()
     Console.WriteLine("  AxamlIdGen check  <root> [--config <path>]   Like scan + assert manifests up to date.");
     Console.WriteLine("  AxamlIdGen write  <root> [--config <path>]   Replace sentinels in XAML, regenerate manifests.");
     Console.WriteLine("  AxamlIdGen emit   <root> [--config <path>]   Regenerate manifests only.");
+    Console.WriteLine("  AxamlIdGen instrument <root> [--config <path>]");
+    Console.WriteLine("                                               Inject AutomationIds on every allow-listed control");
+    Console.WriteLine("                                               that lacks one. Mutates XAML in place. Intended for");
+    Console.WriteLine("                                               build-time use against a sandbox copy of the source.");
     Console.WriteLine();
     Console.WriteLine("Exit codes: 0 clean | 1 validation errors | 2 IO/parse errors | 3 manifests stale.");
 }

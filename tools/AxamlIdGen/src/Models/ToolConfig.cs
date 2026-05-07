@@ -19,6 +19,31 @@ public sealed class ToolConfig
     public OutputPaths Outputs { get; init; } = new();
     public int MaxIdLength { get; init; } = 64;
 
+    /// <summary>
+    /// Element local-names eligible for `instrument` mode auto-injection.
+    /// Element types not in this list are skipped (Grid, Border, Rectangle, etc. — UI plumbing QA doesn't query).
+    /// Template-scoped occurrences of these types are also skipped.
+    /// </summary>
+    public List<string> InstrumentControlTypes { get; init; } = new()
+    {
+        // Buttons / toggles
+        "Button", "RepeatButton", "ToggleButton", "CheckBox", "RadioButton", "ToggleSwitch", "Hyperlink",
+        // Text inputs
+        "TextBox", "RichTextBox", "PasswordBox", "AutoCompleteBox",
+        // Selectors
+        "ComboBox", "ListBox", "ListView", "TreeView", "TreeViewItem",
+        "TabItem", "MenuItem",
+        // Sliders / pickers
+        "Slider", "DatePicker", "TimePicker", "CalendarDatePicker",
+        // Display
+        "TextBlock", "ProgressBar",
+        // DataGrids
+        "DataGrid",
+        // Common Telerik counterparts (extend per project)
+        "RadButton", "RadComboBox", "RadGridView", "RadDatePicker", "RadDateTimePicker",
+        "RadNumericUpDown", "RadToggleButton", "RadSlider", "RadTabItem", "RadMenuItem",
+    };
+
     public static ToolConfig LoadOrDefault(string? path)
     {
         if (string.IsNullOrEmpty(path) || !File.Exists(path))
