@@ -133,9 +133,15 @@ static int RunInstrument(string root, string repoRoot, ToolConfig config)
     var perTierTotals = new int[8];
     var allDiagnostics = new List<AxamlIdGen.Models.Diagnostic>();
 
+    // Shared pool of taken IDs across all files — enforces global uniqueness.
+    // When two files would synthesize the same ID, the second one gets a
+    // collision-suffix (_2, _3, ...) deterministically by file order
+    // (XamlScanner already sorts lexicographically for reproducibility).
+    var globalTaken = new HashSet<string>(StringComparer.Ordinal);
+
     foreach (var file in files)
     {
-        var r = instrumenter.InstrumentFile(file);
+        var r = instrumenter.InstrumentFile(file, globalTaken);
         if (r.Added > 0) filesModified++;
         totalAdded += r.Added;
         totalRefused += r.Refused;

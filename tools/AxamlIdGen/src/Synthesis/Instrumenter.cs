@@ -32,7 +32,14 @@ public sealed class Instrumenter
         _allowList = new HashSet<string>(config.InstrumentControlTypes, StringComparer.Ordinal);
     }
 
-    public InstrumentResult InstrumentFile(string path)
+    public InstrumentResult InstrumentFile(string path) => InstrumentFile(path, sharedTaken: null);
+
+    /// <summary>
+    /// Instrument a single XAML file. <paramref name="sharedTaken"/> is a
+    /// cross-file pool of IDs already in use; pass the same instance across
+    /// successive files in a build to guarantee global uniqueness.
+    /// </summary>
+    public InstrumentResult InstrumentFile(string path, HashSet<string>? sharedTaken)
     {
         var viewName = Path.GetFileNameWithoutExtension(path);
         XDocument doc;
@@ -54,8 +61,18 @@ public sealed class Instrumenter
         var synthesizer = new IdSynthesizer(_config);
         var added = 0;
         var refused = 0;
-        var perTierCounts = new int[8]; // index by tier (0 = refused)
+        var perTierCounts = new int[8];
         var diagnostics = new List<Diagnostic>();
+
+        // Build a "taken" set that already contains every explicit ID in this file
+        // (so collision resolution doesn't clash with what's already there).
+        var taken = sharedTaken ?? new HashSet<string>(StringComparer.Ordinal);
+        foreach (var existing in doc.Descendants())
+        {
+            foreach (var attr in existing.Attributes())
+                if (attr.Name.LocalName == AutomationIdLocalName)
+                    taken.Add(attr.Value);
+        }
 
         foreach (var element in doc.Descendants())
         {
@@ -70,7 +87,6 @@ public sealed class Instrumenter
 
             if (tier == 0)
             {
-                // Cutoff blocked all tiers (cutoff < 4 and no x:Name / Content / property anchor)
                 var li = (System.Xml.IXmlLineInfo)element;
                 diagnostics.Add(new Diagnostic(
                     DiagnosticSeverity.Error,
@@ -82,7 +98,11 @@ public sealed class Instrumenter
                 continue;
             }
 
-            element.SetAttributeValue(XName.Get(AutomationIdLocalName), id);
+            // Resolve any collision with already-taken IDs (in this file or pool).
+            var resolved = synthesizer.ResolveCollision(id, taken);
+            taken.Add(resolved);
+
+            element.SetAttributeValue(XName.Get(AutomationIdLocalName), resolved);
             added++;
             perTierCounts[tier]++;
         }

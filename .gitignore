@@ -14,5 +14,9 @@
 # OS
 .DS_Store
 
+# Local run artifacts
+out.log
+*.log
+
 # package-lock.json kept per npm convention; uncomment if undesired
 # package-lock.json

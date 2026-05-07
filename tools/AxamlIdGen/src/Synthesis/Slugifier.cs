@@ -38,8 +38,10 @@ public static class Slugifier
 
         if (result.Length == 0) return null;
 
-        // Identifier must start with a letter
-        if (char.IsDigit(result[0])) result.Insert(0, '_');
+        // Identifier must start with a letter (segments in the naming pattern
+        // require [A-Za-z] as first char). Prepend 'N' (numeric) for digit-led
+        // strings — "2" → "N2", "100" → "N100".
+        if (char.IsDigit(result[0])) result.Insert(0, 'N');
 
         if (result.Length > maxLength)
             result.Length = maxLength;

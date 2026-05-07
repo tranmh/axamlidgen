@@ -41,8 +41,10 @@ public class SlugifierTests
     }
 
     [Fact]
-    public void Leading_digit_gets_underscore_prefix()
+    public void Leading_digit_gets_N_prefix_so_pattern_segments_stay_letter_led()
     {
-        Assert.Equal("_3Items", Slugifier.Slugify("3 items"));
+        Assert.Equal("N3Items", Slugifier.Slugify("3 items"));
+        Assert.Equal("N100", Slugifier.Slugify("100"));
+        Assert.Equal("N2", Slugifier.Slugify("2"));
     }
 }

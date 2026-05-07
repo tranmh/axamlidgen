@@ -52,9 +52,9 @@ public class IdSynthesizerTests
     public void Collision_resolution_appends_numeric_suffix()
     {
         var s = New();
-        var taken = new HashSet<string>(StringComparer.Ordinal) { "View_Button_Submit", "View_Button_Submit_2" };
+        var taken = new HashSet<string>(StringComparer.Ordinal) { "View_Button_Submit", "View_Button_Submit_N2" };
         var resolved = s.ResolveCollision("View_Button_Submit", taken);
-        Assert.Equal("View_Button_Submit_3", resolved);
+        Assert.Equal("View_Button_Submit_N3", resolved);
     }
 
     [Fact]

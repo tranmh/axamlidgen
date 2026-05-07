@@ -119,9 +119,12 @@ public sealed class IdSynthesizer
     public string ResolveCollision(string baseId, ISet<string> taken)
     {
         if (!taken.Contains(baseId)) return baseId;
+        // Letter-led suffix so the resulting ID still satisfies a naming
+        // pattern that requires every underscore-separated segment to begin
+        // with [A-Za-z]. _N2, _N3, ... rather than _2, _3.
         for (int i = 2; i < int.MaxValue; i++)
         {
-            var candidate = $"{baseId}_{i}";
+            var candidate = $"{baseId}_N{i}";
             if (!taken.Contains(candidate)) return candidate;
         }
         throw new InvalidOperationException("Exhausted collision suffix range.");
