@@ -153,15 +153,7 @@ static int RunInstrument(string root, string repoRoot, ToolConfig config)
     }
 
     Console.WriteLine($"AxamlIdGen instrument: {files.Count} files, +{totalAdded} ids in {filesModified} files, {totalRefused} refused, {sw.ElapsedMilliseconds}ms (cutoff={config.AnchorTierCutoff})");
-    string[] tierNames = { "(refused)", "x:Name", "Content", "PropertyName", "Binding", "GridPosition", "SubtreeOrdinal", "Hash" };
-    for (int t = 1; t < perTierTotals.Length; t++)
-    {
-        Console.WriteLine($"  Tier {t} ({tierNames[t]}): {perTierTotals[t]}");
-    }
-    if (totalRefused > 0)
-    {
-        Console.WriteLine($"  Refused (cutoff blocked): {totalRefused}");
-    }
+    PrintTierTable(perTierTotals, totalAdded, totalRefused);
 
     if (allDiagnostics.Any(d => d.Severity == DiagnosticSeverity.Error))
         return 1;
@@ -209,6 +201,54 @@ static (bool, bool, bool) CompareManifests(PipelineResult result, string root, T
         Diff(Resolve(config.Outputs.CSharp), result.CSharpManifest),
         Diff(Resolve(config.Outputs.TypeScript), result.TypeScriptManifest)
     );
+}
+
+static void PrintTierTable(int[] perTierTotals, int totalAdded, int totalRefused)
+{
+    // (tier => (label, stability))
+    (string Source, string Stability)[] tiers =
+    {
+        ("(refused)",      "n/a"),
+        ("x:Name",         "stable (semantic)"),
+        ("Content",        "stable (semantic)"),
+        ("PropertyName",   "stable (semantic)"),
+        ("Binding",        "stable (semantic)"),
+        ("GridPosition",   "stable (layout)"),
+        ("SubtreeOrdinal", "bounded (ordinal in subtree)"),
+        ("Hash",           "fingerprint (own attrs)"),
+    };
+
+    Console.WriteLine();
+    Console.WriteLine("  Tier   Source              Count        %  Stability");
+    Console.WriteLine("  ─────  ────────────────  ───────  ───────  ────────────────────────────");
+
+    int activeTotal = totalAdded > 0 ? totalAdded : 1; // avoid div/0
+    for (int t = 1; t < perTierTotals.Length; t++)
+    {
+        int n = perTierTotals[t];
+        double pct = 100.0 * n / activeTotal;
+        Console.WriteLine($"  {t,5}  {tiers[t].Source,-16}  {n,7:N0}  {pct,6:F1}%  {tiers[t].Stability}");
+    }
+    Console.WriteLine("  ─────  ────────────────  ───────");
+    Console.WriteLine($"         Total             {totalAdded,7:N0}");
+    Console.WriteLine($"         Refused           {totalRefused,7:N0}");
+
+    // Roll up by stability category
+    int stable = perTierTotals[1] + perTierTotals[2] + perTierTotals[3] + perTierTotals[4] + perTierTotals[5];
+    int bounded = perTierTotals[6];
+    int hash = perTierTotals[7];
+    Console.WriteLine();
+    Console.WriteLine("  Stability distribution:");
+    PrintRollup("Stable      (tiers 1-5)", stable, activeTotal);
+    PrintRollup("Bounded     (tier 6)   ", bounded, activeTotal);
+    PrintRollup("Fingerprint (tier 7)   ", hash, activeTotal);
+    PrintRollup("Refused               ", totalRefused, activeTotal + totalRefused);
+}
+
+static void PrintRollup(string label, int n, int total)
+{
+    double pct = total == 0 ? 0 : 100.0 * n / total;
+    Console.WriteLine($"    {label}: {n,7:N0}  ({pct,5:F1}%)");
 }
 
 static void PrintSummary(PipelineResult result, string command)
