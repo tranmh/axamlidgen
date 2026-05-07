@@ -20,6 +20,15 @@ public sealed class ToolConfig
     public int MaxIdLength { get; init; } = 64;
 
     /// <summary>
+    /// Maximum synthesis tier the tool may use to derive an ID for an
+    /// anchorless control. Tiers, in order: 1 x:Name, 2 Content/Text/Header,
+    /// 3 owning property, 4 binding path, 5 grid position, 6 subtree ordinal,
+    /// 7 hash. cutoff=7 (default) always synthesizes something. cutoff=3
+    /// reproduces strict mode (refuse anchorless controls with AID020).
+    /// </summary>
+    public int AnchorTierCutoff { get; init; } = 7;
+
+    /// <summary>
     /// Element local-names eligible for `instrument` mode auto-injection.
     /// Element types not in this list are skipped (Grid, Border, Rectangle, etc. — UI plumbing QA doesn't query).
     /// Template-scoped occurrences of these types are also skipped.

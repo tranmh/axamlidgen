@@ -15,9 +15,9 @@ namespace AxamlIdGen.Synthesis;
 ///  - elements that already have AutomationProperties.AutomationId
 ///  - property-elements (e.g. Button.Background)
 ///
-/// Errors out on:
-///  - elements with neither x:Name nor literal Content/Text/Header
-///    (no stable anchor → would produce ordinal IDs that flake on reorder)
+/// When <see cref="ToolConfig.AnchorTierCutoff"/> &lt; 4, refuses anchorless
+/// controls with AID020. With cutoff &gt;= 4, always synthesizes via tiers
+/// 4–7 (binding / grid position / subtree ordinal / hash).
 /// </summary>
 public sealed class Instrumenter
 {
@@ -42,70 +42,57 @@ public sealed class Instrumenter
         }
         catch (Exception ex)
         {
-            return new InstrumentResult(path, 0, 0, new[]
+            return new InstrumentResult(path, 0, 0, new int[8], new[]
             {
                 new Diagnostic(DiagnosticSeverity.Error, "AID100",
                     $"Failed to parse XAML: {ex.Message}", path, 1, 1)
             });
         }
 
-        if (doc.Root == null) return new InstrumentResult(path, 0, 0, Array.Empty<Diagnostic>());
+        if (doc.Root == null) return new InstrumentResult(path, 0, 0, new int[8], Array.Empty<Diagnostic>());
 
         var synthesizer = new IdSynthesizer(_config);
         var added = 0;
-        var skippedAnchorless = 0;
+        var refused = 0;
+        var perTierCounts = new int[8]; // index by tier (0 = refused)
         var diagnostics = new List<Diagnostic>();
 
         foreach (var element in doc.Descendants())
         {
-            // Skip property-elements (<Button.Background>...)
             if (element.Name.LocalName.Contains('.')) continue;
-
-            // Allow-list filter
             if (!_allowList.Contains(element.Name.LocalName)) continue;
-
-            // Skip if already instrumented
             if (HasAutomationId(element)) continue;
 
-            // Skip template-scope (would need TemplatedParent anyway)
             var scope = ScopeClassifier.Classify(element, out _);
             if (scope != Scope.Instance) continue;
 
-            var xName = element.Attribute(XamlNamespaces.XAttrName)?.Value;
-            var staticContent = ExtractStaticContent(element);
-            var owningProperty = ExtractOwningPropertyName(element);
+            var (id, source, tier) = synthesizer.Synthesize(viewName, element, _config.AnchorTierCutoff);
 
-            // Refuse to instrument anonymous controls — they would get ordinal
-            // IDs that flake on reorder. Force the developer to name them.
-            if (string.IsNullOrEmpty(xName) && string.IsNullOrEmpty(staticContent))
+            if (tier == 0)
             {
+                // Cutoff blocked all tiers (cutoff < 4 and no x:Name / Content / property anchor)
                 var li = (System.Xml.IXmlLineInfo)element;
                 diagnostics.Add(new Diagnostic(
                     DiagnosticSeverity.Error,
                     "AID020",
                     $"Cannot instrument <{element.Name.LocalName}>: no x:Name and no literal Content/Text/Header. " +
-                    $"Add an x:Name to make it testable, or remove it from instrument allow-list if not QA-relevant.",
+                    $"Add an x:Name to make it testable, raise anchorTierCutoff to 4+, or remove from instrument allow-list.",
                     path, li.LineNumber, li.LinePosition));
-                skippedAnchorless++;
+                refused++;
                 continue;
             }
 
-            var (id, _, _) = synthesizer.Synthesize(viewName, element.Name.LocalName, xName, staticContent, owningProperty);
-
-            // Attach attribute. The attribute lives in no namespace (XAML's attached-property syntax
-            // uses the dotted local-name with the default namespace's URI implicit).
             element.SetAttributeValue(XName.Get(AutomationIdLocalName), id);
             added++;
+            perTierCounts[tier]++;
         }
 
         if (added > 0)
         {
-            // Ephemeral mutation: XDocument-roundtrip reformat is acceptable.
-            // The output is consumed by the WPF compiler, not committed.
             doc.Save(path, SaveOptions.DisableFormatting);
         }
 
-        return new InstrumentResult(path, added, skippedAnchorless, diagnostics);
+        return new InstrumentResult(path, added, refused, perTierCounts, diagnostics);
     }
 
     private static bool HasAutomationId(XElement element)
@@ -116,35 +103,15 @@ public sealed class Instrumenter
             if (c.Name.LocalName == AutomationIdLocalName) return true;
         return false;
     }
-
-    private static string? ExtractStaticContent(XElement element)
-    {
-        string[] candidates = ["Content", "Text", "Header", "Title", "ToolTip"];
-        foreach (var name in candidates)
-        {
-            var a = element.Attribute(name);
-            if (a == null) continue;
-            var v = a.Value?.Trim();
-            if (string.IsNullOrEmpty(v)) continue;
-            if (v.StartsWith('{') && v.EndsWith('}')) continue;
-            return v;
-        }
-        return null;
-    }
-
-    private static string? ExtractOwningPropertyName(XElement element)
-    {
-        var parent = element.Parent;
-        if (parent == null) return null;
-        var name = parent.Name.LocalName;
-        var dot = name.IndexOf('.');
-        if (dot < 0) return null;
-        return name[(dot + 1)..];
-    }
 }
 
 public sealed record InstrumentResult(
     string File,
     int Added,
-    int SkippedAnchorless,
-    IReadOnlyList<Diagnostic> Diagnostics);
+    int Refused,
+    int[] PerTierCounts,
+    IReadOnlyList<Diagnostic> Diagnostics)
+{
+    /// <summary>Backwards-compatible alias used by older tests.</summary>
+    public int SkippedAnchorless => Refused;
+}

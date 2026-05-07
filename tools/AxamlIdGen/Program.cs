@@ -128,8 +128,9 @@ static int RunInstrument(string root, string repoRoot, ToolConfig config)
         .ToList();
 
     int totalAdded = 0;
-    int totalSkipped = 0;
+    int totalRefused = 0;
     int filesModified = 0;
+    var perTierTotals = new int[8];
     var allDiagnostics = new List<AxamlIdGen.Models.Diagnostic>();
 
     foreach (var file in files)
@@ -137,7 +138,9 @@ static int RunInstrument(string root, string repoRoot, ToolConfig config)
         var r = instrumenter.InstrumentFile(file);
         if (r.Added > 0) filesModified++;
         totalAdded += r.Added;
-        totalSkipped += r.SkippedAnchorless;
+        totalRefused += r.Refused;
+        for (int i = 0; i < r.PerTierCounts.Length && i < perTierTotals.Length; i++)
+            perTierTotals[i] += r.PerTierCounts[i];
         allDiagnostics.AddRange(r.Diagnostics);
     }
 
@@ -149,7 +152,16 @@ static int RunInstrument(string root, string repoRoot, ToolConfig config)
         Console.Error.WriteLine($"{d.File}:{d.Line}:{d.Column}: {sev} {d.Code}: {d.Message}");
     }
 
-    Console.WriteLine($"AxamlIdGen instrument: {files.Count} files, +{totalAdded} ids in {filesModified} files, {totalSkipped} skipped (anchorless), {sw.ElapsedMilliseconds}ms");
+    Console.WriteLine($"AxamlIdGen instrument: {files.Count} files, +{totalAdded} ids in {filesModified} files, {totalRefused} refused, {sw.ElapsedMilliseconds}ms (cutoff={config.AnchorTierCutoff})");
+    string[] tierNames = { "(refused)", "x:Name", "Content", "PropertyName", "Binding", "GridPosition", "SubtreeOrdinal", "Hash" };
+    for (int t = 1; t < perTierTotals.Length; t++)
+    {
+        Console.WriteLine($"  Tier {t} ({tierNames[t]}): {perTierTotals[t]}");
+    }
+    if (totalRefused > 0)
+    {
+        Console.WriteLine($"  Refused (cutoff blocked): {totalRefused}");
+    }
 
     if (allDiagnostics.Any(d => d.Severity == DiagnosticSeverity.Error))
         return 1;

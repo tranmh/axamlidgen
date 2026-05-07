@@ -22,6 +22,12 @@ public sealed class NamingValidator
             // Template-scoped IDs are often historical/short (e.g. "VerticalScrollBar")
             // and shouldn't be force-renamed by this tool.
             if (occ.Scope != Scope.Instance) continue;
+            // Synthesized IDs from tiers 5/6/7 use embedded markers (R0C1, UnderName_N,
+            // h_<hex>) that don't match a pascal-style human pattern. Skip those —
+            // the markers are tool-emitted and intentional.
+            if (occ.Provenance is ProvenanceSource.GridPosition
+                or ProvenanceSource.SubtreeOrdinal
+                or ProvenanceSource.Hash) continue;
             if (!_pattern.IsMatch(occ.FinalId))
             {
                 diagnostics.Add(new Diagnostic(
