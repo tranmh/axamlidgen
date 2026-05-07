@@ -27,23 +27,59 @@ Usage: ./metris-core.sh [OPTIONS]
 
 Run AxamlIdGen against the real metris-core tree.
 
-Options:
-  -n, --dry-run    Read-only scan; print discovered IDs without mutating XAML.
-  -y, --yes        Skip the "this will modify XAML" confirmation prompt.
+OPTIONS
+  -n, --dry-run    Read-only scan. Prints discovered IDs and the per-tier
+                   breakdown without mutating any XAML or creating any
+                   files inside metris-core.
+  -y, --yes        Non-interactive. Skip the "this will modify XAML"
+                   confirmation prompt. Intended for CI / automated builds.
   -h, --help       Show this help.
 
-Environment:
+ENVIRONMENT
   METRIS_CORE_PATH  Override metris-core location.
                     Default: \$REPO_ROOT/../metris-test/metris-core
 
-Examples:
+WHAT IT DOES
+  - Generates a tool config in /tmp (absolute output paths, so dry-run
+    leaves metris-core completely untouched).
+  - Builds AxamlIdGen in Release.
+  - Runs 'scan' (--dry-run) or 'instrument' against metris-core.
+  - Prints a per-tier breakdown of synthesized AutomationIds:
+        Tier 1  x:Name           stable (semantic)
+        Tier 2  Content          stable (semantic)
+        Tier 3  PropertyName     stable (semantic)
+        Tier 4  Binding          stable (semantic)
+        Tier 5  GridPosition     stable (layout)
+        Tier 6  SubtreeOrdinal   bounded (ordinal in subtree)
+        Tier 7  Hash             fingerprint (own attrs)
+
+WHAT 'instrument' PRODUCES INSIDE metris-core
+  - ~1,422 modified XAML files (AutomationProperties.AutomationId injected
+    on every allow-listed control that lacked one).
+  - automation-ids.json
+  - Generated/AutomationIds.g.cs       (namespace Metris.Generated)
+  - automation-ids.generated.ts
+
+  These mutations are intended to be EPHEMERAL — never commit them.
+  Run 'instrument' before each compile/test cycle, then revert.
+
+EXAMPLES
   ./metris-core.sh --dry-run               # safe inspection, no changes
   ./metris-core.sh                         # interactive instrument
-  ./metris-core.sh --yes                   # CI-style; non-interactive
-  METRIS_CORE_PATH=/path/to/x ./metris-core.sh -y -n
+  ./metris-core.sh --yes                   # non-interactive (CI)
+  METRIS_CORE_PATH=/path/to/x ./metris-core.sh -n
 
-After an instrument run, revert with:
-  git -C "\$METRIS_CORE_PATH" checkout -- .
+REVERT (after an instrument run)
+  git -C "\$METRIS_CORE_PATH" checkout -- . && \\
+    git -C "\$METRIS_CORE_PATH" clean -fd
+
+  Or if you set METRIS_CORE_PATH explicitly:
+  git -C ../metris-test/metris-core checkout -- . && \\
+    git -C ../metris-test/metris-core clean -fd
+
+IDEMPOTENCY
+  Re-running 'instrument' on an already-instrumented tree adds 0 IDs.
+  Each XAML file is only modified if it gains a new AutomationId.
 EOF
 }
 
