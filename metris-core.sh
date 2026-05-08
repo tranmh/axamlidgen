@@ -3,7 +3,7 @@
 #
 # Use case: ephemeral build-time instrumentation. The tool injects
 # AutomationProperties.AutomationId attributes into XAML in place, the WPF
-# compiler consumes the modified tree, then you `git -C ../metris-test/metris-core
+# compiler consumes the modified tree, then you `git -C ../../metris-core
 # checkout -- .` to discard the changes. NEVER commit the result.
 #
 # Idempotent: re-running on an already-instrumented tree adds 0 IDs.
@@ -17,7 +17,7 @@ err()  { printf '\033[1;31m[error]\033[0m      %s\n' "$*" >&2; }
 
 # ---- args ----------------------------------------------------------------
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-METRIS_CORE="${METRIS_CORE_PATH:-$REPO_ROOT/../metris-test/metris-core}"
+METRIS_CORE="${METRIS_CORE_PATH:-$REPO_ROOT/../../metris-core}"
 DRY_RUN=0
 ASSUME_YES=0
 
@@ -37,7 +37,9 @@ OPTIONS
 
 ENVIRONMENT
   METRIS_CORE_PATH  Override metris-core location.
-                    Default: \$REPO_ROOT/../metris-test/metris-core
+                    Default: \$REPO_ROOT/../../metris-core
+                    (i.e. the metris-core submodule at the repo root,
+                    since this tool lives at tools/axamlidgen)
 
 WHAT IT DOES
   - Generates a tool config in /tmp (absolute output paths, so dry-run
@@ -73,9 +75,9 @@ REVERT (after an instrument run)
   git -C "\$METRIS_CORE_PATH" checkout -- . && \\
     git -C "\$METRIS_CORE_PATH" clean -fd
 
-  Or if you set METRIS_CORE_PATH explicitly:
-  git -C ../metris-test/metris-core checkout -- . && \\
-    git -C ../metris-test/metris-core clean -fd
+  Or relative to this script's location:
+  git -C ../../metris-core checkout -- . && \\
+    git -C ../../metris-core clean -fd
 
 IDEMPOTENCY
   Re-running 'instrument' on an already-instrumented tree adds 0 IDs.
