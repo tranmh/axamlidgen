@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using AxamlIdGen.Cli;
 using AxamlIdGen.Models;
+using AxamlIdGen.Synthesis;
 using Xunit;
 
 namespace AxamlIdGen.Tests.RealWorld;
@@ -25,6 +26,8 @@ public class MetrisCoreTests
         var candidates = new[]
         {
             Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "..", "metris-test", "metris-core")),
+            "/home/tranmh/work/metris_tmp/metris-core",
+            "/home/tranmh/work/metris-core",
             "/home/tranmh/work/metris-test/metris-core"
         };
         return candidates.FirstOrDefault(Directory.Exists);
@@ -166,6 +169,102 @@ public class MetrisCoreTests
 
         foreach (var (p, mtime) in before)
             Assert.Equal(mtime, File.GetLastWriteTimeUtc(p));
+    }
+
+    private static List<string> SandboxCopy(string sourceRoot, int count, int maxBytes)
+    {
+        var picks = Directory.EnumerateFiles(sourceRoot, "*.xaml", SearchOption.AllDirectories)
+            .Where(f => new FileInfo(f).Length < maxBytes)
+            .Take(count)
+            .ToList();
+        var sandbox = Path.Combine(Path.GetTempPath(), "axamlidgen-rwdiff", Guid.NewGuid().ToString("N")[..8]);
+        Directory.CreateDirectory(sandbox);
+        var copies = new List<string>();
+        int n = 1;
+        foreach (var src in picks)
+        {
+            var dst = Path.Combine(sandbox, $"{n++}_{Path.GetFileName(src)}");
+            File.Copy(src, dst, overwrite: true);
+            copies.Add(dst);
+        }
+        return copies;
+    }
+
+    // 27.
+    [Fact]
+    public void Instrument_realCorpus_subset_changes_exactly_addedCount_lines_per_file()
+    {
+        var path = RealWorldPath();
+        if (path == null) return;
+
+        var files = SandboxCopy(path!, count: 30, maxBytes: 8 * 1024);
+        Assert.NotEmpty(files);
+
+        var instr = new Instrumenter(new ToolConfig());
+        foreach (var f in files)
+        {
+            var before = File.ReadAllText(f);
+            var r = instr.InstrumentFile(f);
+            if (r.Added == 0) continue; // nothing to assert for files with no instrumentable controls
+            var after = File.ReadAllText(f);
+            var d = TestHelpers.DiffStats(before, after);
+            Assert.True(
+                d.Modified == r.Added && d.Added == 0 && d.Removed == 0,
+                $"File {f}: expected ({r.Added},0,0) but got ({d.Modified},{d.Added},{d.Removed}).");
+        }
+    }
+
+    // 28.
+    [Fact]
+    public void Instrument_realCorpus_doesNotFlipQuoteStyles()
+    {
+        var path = RealWorldPath();
+        if (path == null) return;
+
+        var files = SandboxCopy(path!, count: 30, maxBytes: 8 * 1024);
+        Assert.NotEmpty(files);
+
+        var instr = new Instrumenter(new ToolConfig());
+        foreach (var f in files)
+        {
+            var before = File.ReadAllText(f);
+            int beforeSingleQ = before.Count(c => c == '\'');
+            int beforeDoubleQ = before.Count(c => c == '"');
+            var r = instr.InstrumentFile(f);
+            if (r.Added == 0) continue;
+            var after = File.ReadAllText(f);
+            int afterSingleQ = after.Count(c => c == '\'');
+            // The inserted attribute uses double quotes; each Added contributes 2 double quotes.
+            int afterDoubleQ = after.Count(c => c == '"');
+            Assert.True(beforeSingleQ == afterSingleQ,
+                $"File {f}: single-quote count changed {beforeSingleQ} -> {afterSingleQ} (existing attrs got rewritten).");
+            Assert.True(afterDoubleQ == beforeDoubleQ + 2 * r.Added,
+                $"File {f}: double-quote delta {afterDoubleQ - beforeDoubleQ} != 2*Added ({2 * r.Added}).");
+        }
+    }
+
+    // 29.
+    [Fact]
+    public void Instrument_realCorpus_preserves_BOM_byte()
+    {
+        var path = RealWorldPath();
+        if (path == null) return;
+
+        var files = SandboxCopy(path!, count: 30, maxBytes: 8 * 1024);
+        Assert.NotEmpty(files);
+
+        var instr = new Instrumenter(new ToolConfig());
+        foreach (var f in files)
+        {
+            var beforeBytes = File.ReadAllBytes(f);
+            bool hadBom = beforeBytes.Length >= 3 && beforeBytes[0] == 0xEF && beforeBytes[1] == 0xBB && beforeBytes[2] == 0xBF;
+            var r = instr.InstrumentFile(f);
+            if (r.Added == 0) continue;
+            var afterBytes = File.ReadAllBytes(f);
+            bool hasBom = afterBytes.Length >= 3 && afterBytes[0] == 0xEF && afterBytes[1] == 0xBB && afterBytes[2] == 0xBF;
+            Assert.True(hadBom == hasBom,
+                $"File {f}: BOM presence changed {hadBom} -> {hasBom}.");
+        }
     }
 }
 

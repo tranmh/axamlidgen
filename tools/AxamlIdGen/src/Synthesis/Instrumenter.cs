@@ -74,6 +74,9 @@ public sealed class Instrumenter
                     taken.Add(attr.Value);
         }
 
+        // Collected insertions to apply via byte-preserving text splice after the analysis loop.
+        var insertions = new List<(int Line, int Col, string LocalName, string Value)>();
+
         foreach (var element in doc.Descendants())
         {
             if (element.Name.LocalName.Contains('.')) continue;
@@ -87,13 +90,13 @@ public sealed class Instrumenter
 
             if (tier == 0)
             {
-                var li = (System.Xml.IXmlLineInfo)element;
+                var li0 = (System.Xml.IXmlLineInfo)element;
                 diagnostics.Add(new Diagnostic(
                     DiagnosticSeverity.Error,
                     "AID020",
                     $"Cannot instrument <{element.Name.LocalName}>: no x:Name and no literal Content/Text/Header. " +
                     $"Add an x:Name to make it testable, raise anchorTierCutoff to 4+, or remove from instrument allow-list.",
-                    path, li.LineNumber, li.LinePosition));
+                    path, li0.LineNumber, li0.LinePosition));
                 refused++;
                 continue;
             }
@@ -102,14 +105,15 @@ public sealed class Instrumenter
             var resolved = synthesizer.ResolveCollision(id, taken);
             taken.Add(resolved);
 
-            element.SetAttributeValue(XName.Get(AutomationIdLocalName), resolved);
+            var li = (System.Xml.IXmlLineInfo)element;
+            insertions.Add((li.LineNumber, li.LinePosition, AutomationIdLocalName, resolved));
             added++;
             perTierCounts[tier]++;
         }
 
-        if (added > 0)
+        if (insertions.Count > 0)
         {
-            doc.Save(path, SaveOptions.DisableFormatting);
+            XamlRewriter.InsertAttributes(path, insertions);
         }
 
         return new InstrumentResult(path, added, refused, perTierCounts, diagnostics);
