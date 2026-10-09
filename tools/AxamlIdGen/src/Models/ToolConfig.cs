@@ -51,6 +51,9 @@ public sealed class ToolConfig
         // Common Telerik counterparts (extend per project)
         "RadButton", "RadComboBox", "RadGridView", "RadDatePicker", "RadDateTimePicker",
         "RadNumericUpDown", "RadToggleButton", "RadSlider", "RadTabItem", "RadMenuItem",
+        // Telerik RibbonView (WPF)
+        "RadRibbonButton", "RadRibbonDropDownButton", "RadRibbonSplitButton", "RadRibbonToggleButton",
+        "RadRibbonRadioButton", "RadRibbonComboBox", "RadRibbonTab", "RadRibbonGroup",
     };
 
     public static ToolConfig LoadOrDefault(string? path)

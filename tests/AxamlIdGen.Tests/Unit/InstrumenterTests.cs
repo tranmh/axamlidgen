@@ -91,6 +91,26 @@ public class InstrumenterTests
     }
 
     [Fact]
+    public void Injects_on_prefixed_Telerik_ribbon_controls_by_default()
+    {
+        var path = TestHelpers.WriteTemp("Ribbon.xaml", $@"<Window xmlns=""http://schemas.microsoft.com/winfx/2006/xaml/presentation"" xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml"" xmlns:telerik=""http://schemas.telerik.com/2008/xaml/presentation"">
+            <telerik:RadRibbonTab x:Name=""Home"">
+                <telerik:RadRibbonGroup x:Name=""Clipboard"">
+                    <telerik:RadRibbonButton Command=""{{Binding CopyCommand}}""/>
+                </telerik:RadRibbonGroup>
+            </telerik:RadRibbonTab>
+        </Window>");
+
+        var result = new Instrumenter(new ToolConfig()).InstrumentFile(path);
+
+        Assert.Equal(3, result.Added);
+        var content = File.ReadAllText(path);
+        Assert.Contains("Ribbon_RadRibbonTab_Home", content);
+        Assert.Contains("Ribbon_RadRibbonGroup_Clipboard", content);
+        Assert.Contains("Ribbon_RadRibbonButton_CopyCommand", content);
+    }
+
+    [Fact]
     public void Idempotent_second_run_makes_no_changes()
     {
         var path = TestHelpers.WriteTemp("View.axaml",
