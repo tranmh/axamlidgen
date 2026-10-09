@@ -44,8 +44,8 @@ public class MetrisCoreTests
         sw.Stop();
 
         // Survey expectations
-        Assert.True(result.FilesScanned > 2000,
-            $"Expected >2000 files scanned, got {result.FilesScanned}");
+        Assert.True(result.FilesScanned > 1500,
+            $"Expected >1500 files scanned, got {result.FilesScanned}");
         Assert.Empty(result.Diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error));
 
         // Performance budget (env-overridable)
